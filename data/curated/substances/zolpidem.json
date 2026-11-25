@@ -10,7 +10,7 @@
       "duration": {
         "onset": {
           "min": 15,
-          "max": 30
+          "max": 45
         },
         "comeup": {
           "min": 30,
@@ -29,7 +29,8 @@
           "max": 480
         }
       },
-      "durationReason": "Upstream oral profiles hold the peak for 3–6 h, far past zolpidem's ~1.5 h plasma peak and ~2.5 h elimination half-life (Ambien label, section 12.3); this crests near Tmax and ends inside the label's 7–8 h window."
+      "durationReason": "Upstream oral profiles hold the peak for 3–6 h, but plasma peaks 0.75–2.6 h after the dose (pmid:8521677), impairment is generally gone from 6 h (the cited review) and sedation is back to baseline by 8 h (pmid:11192136).",
+      "durationSource": "doi:10.2165/00003495-200059040-00014"
     }
   ]
 }
