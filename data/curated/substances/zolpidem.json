@@ -2,5 +2,34 @@
   "name": "Zolpidem",
   "aliases": [
     "唑吡坦"
+  ],
+  "routes": [
+    {
+      "route": "oral",
+      "unit": "mg",
+      "duration": {
+        "onset": {
+          "min": 15,
+          "max": 30
+        },
+        "comeup": {
+          "min": 30,
+          "max": 45
+        },
+        "peak": {
+          "min": 60,
+          "max": 120
+        },
+        "offset": {
+          "min": 180,
+          "max": 300
+        },
+        "total": {
+          "min": 360,
+          "max": 480
+        }
+      },
+      "durationReason": "Upstream oral profiles hold the peak for 3–6 h, far past zolpidem's ~1.5 h plasma peak and ~2.5 h elimination half-life (Ambien label, section 12.3); this crests near Tmax and ends inside the label's 7–8 h window."
+    }
   ]
 }
