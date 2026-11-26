@@ -1,9 +1,10 @@
 import Foundation
 
 /// Settings ▸ Journal ▸ Hidden Classes: whole substance classes kept out of
-/// the Journal's history (Days, Timeline, Grouped, and the pushed timeline
-/// screen). The entries stay recorded — Search, Insights, My Meds, Active Now
-/// and exports read the full log. A Quiet med is grouped under Supplements in
+/// the Journal's history (Days, Timeline, Grouped, the pushed timeline screen,
+/// and a session's graph and rows). The entries stay recorded — Search,
+/// Insights, My Meds, Active Now, exports and a session's interaction warnings
+/// read the full log. A Quiet med is grouped under Supplements in
 /// My Meds, so the Supplements switch also hides the doses logged from one,
 /// whatever their class. The rule follows the dose, not the med: it is the
 /// dose's own ``DoseEntry/isBackgroundMed``, stamped when it was logged, the

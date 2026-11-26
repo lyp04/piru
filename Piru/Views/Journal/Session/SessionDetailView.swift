@@ -16,8 +16,23 @@ struct SessionDetailView: View {
     /// edit/UI concerns.
     @State private var model = SessionDetailModel()
 
-    /// The session's doses in time order — the view's working set.
+    @AppStorage(JournalVisibility.hidesSupplementsKey, store: UserDefaults(suiteName: JournalVisibility.suite)) private var hidesSupplements = false
+    @AppStorage(JournalVisibility.hidesMedsKey, store: UserDefaults(suiteName: JournalVisibility.suite)) private var hidesMeds = false
+
+    private var hiddenCategories: Set<SubstanceCategory> {
+        JournalVisibility.hiddenCategories(supplements: hidesSupplements, meds: hidesMeds)
+    }
+
+    /// The session's doses in time order — the view's working set. A hidden
+    /// class (``JournalVisibility``) stays out of it, as it does out of the
+    /// session's card; ``allEntries`` still has it.
     private var entries: [DoseEntry] {
+        JournalVisibility.visible(allEntries, hiding: hiddenCategories)
+    }
+
+    /// Every dose in the session, hidden or not. Interaction warnings read
+    /// these: hiding a class from the Journal never hides what it interacts with.
+    private var allEntries: [DoseEntry] {
         session.orderedDoses
     }
 
@@ -63,12 +78,15 @@ struct SessionDetailView: View {
     /// Everything the sections read, resolved once per content change — see
     /// ``SessionResolveModel``.
     private var resolvedDay: ResolvedDay {
-        SessionResolveModel.resolvedDay(
-            entries: entries,
+        let all = allEntries
+        let shown = entries
+        return SessionResolveModel.resolvedDay(
+            entries: shown,
+            checking: all,
             colors: Array(substanceColors),
             startDate: session.startDate,
             signature: SessionResolveModel.timelineSignature(
-                entries: entries, colorSignature: colorSignature, startDate: session.startDate,
+                entries: all, shown: shown, colorSignature: colorSignature, startDate: session.startDate,
             ),
         )
     }
@@ -302,7 +320,7 @@ struct SessionDetailView: View {
             .navigationTitle(session.title ?? SessionDateTitle.full(date))
             .inlineNavigationTitle()
             .toolbar {
-                if !entries.isEmpty {
+                if !allEntries.isEmpty {
                     ToolbarItem(placement: .platformTopBarTrailing) {
                         Button {
                             showShareSession = true
@@ -320,7 +338,7 @@ struct SessionDetailView: View {
                         hasCurves: !day.states.isEmpty,
                         isToday: isToday,
                         hasOngoingDose: ongoing,
-                        longestBreakPivot: SessionMenu.longestBreakPivot(in: entries),
+                        longestBreakPivot: SessionMenu.longestBreakPivot(in: allEntries),
                         onRename: {
                             titleDraft = session.title ?? ""
                             showRename = true
@@ -355,7 +373,7 @@ struct SessionDetailView: View {
                 SessionShareSheet(
                     title: session.title ?? "",
                     dateText: SessionDateTitle.full(date),
-                    entries: entries,
+                    entries: allEntries,
                     colors: Array(substanceColors),
                     stackRedoses: stackRedoses,
                     doseHR: model.doseHR,
@@ -407,7 +425,7 @@ struct SessionDetailView: View {
             LiveActivityManager.shared.hideLiveActivity()
         } else {
             ActiveSessionManager.shared.restartFromEntries(
-                entries,
+                allEntries,
                 allColors: Array(substanceColors),
             )
             LiveActivityManager.shared.startLiveActivity()

@@ -48,21 +48,31 @@ enum SessionResolveModel {
     /// up front keeps the view tree's shape fixed from frame 1: `states` and
     /// `interactions` are never empty on the first render, so the `if !…isEmpty`
     /// Sections never flip in and rebuild the List content.
-    static func resolvedDay(entries: [DoseEntry], colors: [SubstanceColor], startDate: Date, signature: Int) -> ResolvedDay {
+    ///
+    /// The interaction and PK checks read `checking` (every dose in the
+    /// session, defaulting to `entries`); everything else reads `entries`, the
+    /// doses the screen shows.
+    static func resolvedDay(
+        entries: [DoseEntry],
+        checking all: [DoseEntry]? = nil,
+        colors: [SubstanceColor],
+        startDate: Date,
+        signature: Int,
+    ) -> ResolvedDay {
         DayResolveCache.shared.resolve(signature: signature) {
-            resolve(entries: entries, colors: colors, startDate: startDate)
+            resolve(entries: entries, checking: all ?? entries, colors: colors, startDate: startDate)
         }
     }
 
-    private static func resolve(entries: [DoseEntry], colors: [SubstanceColor], startDate: Date) -> ResolvedDay {
+    private static func resolve(entries: [DoseEntry], checking all: [DoseEntry], colors: [SubstanceColor], startDate: Date) -> ResolvedDay {
         let t = ActiveSubstanceState.timeline(for: entries, colors: colors)
-        let names = Array(Set(entries.map(\.substance)))
+        let names = Array(Set(all.map(\.substance)))
         let interactions = names.count >= 2 ? InteractionChecker.checkBatch(names, against: []) : []
         // The measured layer. Every row here cites a study; matching is
         // canonical-name only, so a row naming a class ("CYP3A4 inhibitors")
         // stays on its own substance page rather than being inferred onto a
         // logged drug.
-        let active = InteractionChecker.activeEntries(from: entries)
+        let active = InteractionChecker.activeEntries(from: all)
         var pkFindings: [PKInteractionFinding] = []
         var seenPK: Set<Int64> = []
         for name in names {
@@ -148,9 +158,15 @@ enum SessionResolveModel {
 
     /// Content fingerprint of every input the resolve reads — each dose's
     /// identity, amount, unit and formulation, the session start, and the
-    /// substance colors — so it re-runs on an edit or a recolor but not on every
-    /// body re-evaluation.
-    static func timelineSignature(entries: [DoseEntry], colorSignature: Int, startDate: Date) -> Int {
+    /// substance colors, and which doses are `shown` when that is fewer than
+    /// `entries` — so it re-runs on an edit, a recolor or a Hidden Classes
+    /// switch but not on every body re-evaluation.
+    static func timelineSignature(
+        entries: [DoseEntry],
+        shown: [DoseEntry]? = nil,
+        colorSignature: Int,
+        startDate: Date,
+    ) -> Int {
         var hasher = Hasher()
         for entry in entries {
             hasher.combine(entry.persistentModelID)
@@ -168,9 +184,15 @@ enum SessionResolveModel {
             hasher.combine(entry.releaseForm)
             hasher.combine(entry.productName)
             hasher.combine(entry.mealRaw)
+            hasher.combine(entry.isBackgroundMed)
         }
         hasher.combine(colorSignature)
         hasher.combine(startDate)
+        // The rows are indexed against `entryCores`, so the shown set is keyed
+        // by the doses themselves, not by the switches that picked them.
+        for entry in shown ?? [] {
+            hasher.combine(entry.persistentModelID)
+        }
         return hasher.finalize()
     }
 

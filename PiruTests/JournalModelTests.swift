@@ -339,6 +339,47 @@ struct JournalModelTests {
     }
 
     @Test
+    func `A session's detail leaves out a hidden dose but still checks it`() async throws {
+        await SubstanceStore.shared.ensureAllLoaded()
+        let context = try makeContext()
+        let start = Date.now.addingTimeInterval(-60 * 60)
+        // A Quiet dose joins a session only while one is active, so it comes second.
+        context.insert(DoseEntry(substance: "MDMA", amount: 100, timestamp: start))
+        let maoi = DoseEntry(substance: "Phenelzine", amount: 15, timestamp: start.addingTimeInterval(30 * 60))
+        maoi.isBackgroundMed = true
+        context.insert(maoi)
+        try context.save()
+        SessionService.assignUnassignedDoses(in: context)
+        try context.save()
+        let session = try #require(maoi.session)
+        let all = session.orderedDoses
+        #expect(all.count == 2)
+
+        let hidden = JournalVisibility.hiddenCategories(supplements: true, meds: false)
+        let shown = JournalVisibility.visible(all, hiding: hidden)
+        #expect(shown.map(\.substance) == ["MDMA"])
+
+        let day = SessionResolveModel.resolvedDay(
+            entries: shown, checking: all, colors: [], startDate: session.startDate,
+            signature: SessionResolveModel.timelineSignature(
+                entries: all, shown: shown, colorSignature: 0, startDate: session.startDate,
+            ),
+        )
+        // The rows and the graph carry only what is shown…
+        #expect(day.entryCores.count == shown.count)
+        #expect(!day.states.contains { $0.substanceName.lowercased() == "phenelzine" })
+        #expect(!day.markers.contains { $0.substanceName.lowercased() == "phenelzine" })
+        // …but the MAOI still counts against the MDMA.
+        #expect(!day.interactions.isEmpty)
+
+        // Hiding a dose is a different resolve, never a cache hit on the full one.
+        #expect(
+            SessionResolveModel.timelineSignature(entries: all, shown: shown, colorSignature: 0, startDate: session.startDate)
+                != SessionResolveModel.timelineSignature(entries: all, shown: all, colorSignature: 0, startDate: session.startDate),
+        )
+    }
+
+    @Test
     func `Each Hidden Classes switch covers its Library families`() {
         #expect(JournalVisibility.hiddenCategories(supplements: false, meds: false).isEmpty)
         #expect(JournalVisibility.hiddenCategories(supplements: true, meds: false) == [.supplement])
